@@ -43,62 +43,62 @@ router.delete("/:id", async (req, res) => {
 });
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  secure: true,
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
   auth: {
-    user: "k8320085@gmail.com", // 👈 ايميلك اللي هتستقبل عليه الرسائل
-    pass: "wsar byhv qazz jmsf", // 👈 باسورد التطبيق (مش باسورد الايميل العادي)
+    user: process.env.email,
+    pass: process.env.password,
   },
+  tls: {
+    rejectUnauthorized: false,
+  },
+  connectionTimeout: 15000,
 });
 
-// Endpoint استقبال البيانات وإرسالها لايميلك
+// Endpoint إرسال البريد
 router.post("/sendEmail", async (req, res) => {
+  // رد فوري لمنع التعليق
+  let emailSent = false;
+
   try {
     const { name, email, message } = req.body;
 
-    // التحقق من البيانات
     if (!name || !email || !message) {
       return res.status(400).json({
         success: false,
-        message: "الاسم والبريد الإلكتروني والرسالة كلهم مطلوبين",
+        message: "جميع الحقول مطلوبة",
       });
     }
 
-    // إعداد محتوى البريد اللي هتستقبله انت
     const mailOptions = {
-      from: `"${name}" <${email}>`, // من (اللي مليء الفورم)
-      to: "your-email@gmail.com", // 👈 لايميلك انت الشخصي
-      subject: `رسالة جديدة من ${name}`, // موضوع البريد
-      text: `
-الاسم: ${name}
-البريد الإلكتروني: ${email}
-الرسالة: 
-${message}
-      `,
-      html: `
-        <div style="font-family: Arial, sans-serif;">
-          <h3>📬 رسالة جديدة من موقعك</h3>
-          <p><strong>👤 الاسم:</strong> ${name}</p>
-          <p><strong>📧 البريد:</strong> ${email}</p>
-          <p><strong>💬 الرسالة:</strong></p>
-          <p style="background: #f0f0f0; padding: 10px;">${message}</p>
-        </div>
-      `,
+      from: `"${name}" <${email}>`,
+      to: "k8320085@gmail.com", // غيرها لايميلك
+      subject: `رسالة جديدة من ${name}`,
+      text: `الاسم: ${name}\nالبريد: ${email}\nالرسالة: ${message}`,
+      html: `<h3>رسالة جديدة</h3><p><strong>الاسم:</strong> ${name}</p><p><strong>البريد:</strong> ${email}</p><p><strong>الرسالة:</strong></p><p>${message}</p>`,
     };
 
-    // إرسال البريد
-    await transporter.sendMail(mailOptions);
+    // إرسال البريد مع timeout
+    const emailPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Timeout after 15 seconds")), 15000);
+    });
 
-    // رد للمستخدم
+    await Promise.race([emailPromise, timeoutPromise]);
+    emailSent = true;
+
     res.status(200).json({
       success: true,
-      message: "تم إرسال رسالتك بنجاح! هتوصلني خلال دقائق ✅",
+      message: "تم إرسال رسالتك بنجاح! ✅",
     });
   } catch (error) {
-    console.log("خطأ:", error);
+    console.error("Email error:", error);
     res.status(500).json({
       success: false,
-      message: "عذراً، حدث خطأ تقني. حاول مرة تانية 🔧",
+      message: emailSent
+        ? "تم الإرسال لكن حدث تأخير"
+        : "فشل الإرسال: " + error.message,
     });
   }
 });
