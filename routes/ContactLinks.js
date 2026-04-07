@@ -44,8 +44,8 @@ router.delete("/:id", async (req, res) => {
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.email,
     pass: process.env.password,
