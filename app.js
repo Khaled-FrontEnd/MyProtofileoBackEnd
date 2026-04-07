@@ -4,7 +4,7 @@ require("dotenv").config({ debug: false, silent: true });
 const router = express.Router();
 
 const app = express();
-const SkillsRouter = require("./routes/skills");
+const SkillsRouter = require("./routes/Skills");
 const ProjectsRouter = require("./routes/Projects")
 const contactLinksRouter = require("./routes/ContactLinks")
 
