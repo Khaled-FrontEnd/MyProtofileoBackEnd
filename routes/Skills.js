@@ -7,8 +7,8 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  let { img, name } = req.body;
-  let newSkill = await skills.create({ name: name, img: img });
+
+  let newSkill = await skills.create(req.body);
   res.status(200).json(newSkill);
 });
 
