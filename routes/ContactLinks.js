@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const contactLinks = require("../models/contactLinks");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 router.get("/", async (req, res) => {
   res.status(200).json(await contactLinks.find());
@@ -42,25 +43,8 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.email,
-    pass: process.env.password,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-  connectionTimeout: 15000,
-});
-
-// Endpoint إرسال البريد
 router.post("/sendEmail", async (req, res) => {
-  // رد فوري لمنع التعليق
-  let emailSent = false;
-
+  
   try {
     const { name, email, message } = req.body;
 
@@ -71,22 +55,21 @@ router.post("/sendEmail", async (req, res) => {
       });
     }
 
-    const mailOptions = {
-      from: `"${name}" <${email}>`,
-      to: "k8320085@gmail.com", // غيرها لايميلك
+    const { error } = await resend.emails.send({
+      from: "onboarding@resend.dev", // مجاني بدون domain verification
+      to: "k8320085@gmail.com",
       subject: `رسالة جديدة من ${name}`,
-      text: `الاسم: ${name}\nالبريد: ${email}\nالرسالة: ${message}`,
-      html: `<h3>رسالة جديدة</h3><p><strong>الاسم:</strong> ${name}</p><p><strong>البريد:</strong> ${email}</p><p><strong>الرسالة:</strong></p><p>${message}</p>`,
-    };
-
-    // إرسال البريد مع timeout
-    const emailPromise = transporter.sendMail(mailOptions);
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Timeout after 15 seconds")), 15000);
+      html: `
+        <h3>رسالة جديدة</h3>
+        <p><strong>الاسم:</strong> ${name}</p>
+        <p><strong>البريد:</strong> ${email}</p>
+        <p><strong>الرسالة:</strong></p>
+        <p>${message}</p>
+      `,
+      reply_to: email,
     });
 
-    await Promise.race([emailPromise, timeoutPromise]);
-    emailSent = true;
+    if (error) throw new Error(error.message);
 
     res.status(200).json({
       success: true,
@@ -96,11 +79,8 @@ router.post("/sendEmail", async (req, res) => {
     console.error("Email error:", error);
     res.status(500).json({
       success: false,
-      message: emailSent
-        ? "تم الإرسال لكن حدث تأخير"
-        : "فشل الإرسال: " + error.message,
+      message: "فشل الإرسال: " + error.message,
     });
   }
 });
-
 module.exports = router;
