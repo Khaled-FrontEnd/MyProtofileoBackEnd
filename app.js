@@ -1,6 +1,7 @@
 let express = require("express");
 let mongoose = require("mongoose");
 require("dotenv").config({ debug: false, silent: true });
+const cors = require('cors');
 const router = express.Router();
 
 const app = express();
