@@ -33,7 +33,7 @@ router.put("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
-    await projects.findOneAndDelete(req.params.id);
+    await projects.findOneAndDelete({_id: req.params.id});
     res.status(201).send({ message: "Deleted Successful!" });
   } catch (err) {
     console.log(err);
